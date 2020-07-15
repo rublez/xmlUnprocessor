@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Envelope xmlns="https://www.bcb.gov.br/pi/pibr.001/1.1">
+	<AppHdr id="0f55543b-0b14-47e8-a5d0-f591d016ff83">
+		<Fr>
+			<FIId>
+				<FinInstnId>
+					<Othr>
+						<Id>74828799</Id>
+					</Othr>
+				</FinInstnId>
+			</FIId>
+		</Fr>
+		<To>
+			<FIId>
+				<FinInstnId>
+					<Othr>
+						<Id>01181521</Id>
+					</Othr>
+				</FinInstnId>
+			</FIId>
+		</To>
+		<BizMsgIdr>M74828799498825569f31482fb3e466d</BizMsgIdr>
+		<MsgDefIdr>pibr.001.spi.1.1</MsgDefIdr>
+		<CreDt>2020-07-07T13:35:32.267Z</CreDt>
+		<Sgntr />
+	</AppHdr>
+	<Document id="14875717-04ff-4540-b0a0-a70c696a85a5">
+		<EchoReq>
+			<GrpHdr>
+				<MsgId>M74828799498825569f31482fb3e466d</MsgId>
+				<CreDtTm>2020-07-07T13:35:32.267Z</CreDtTm>
+			</GrpHdr>
+			<EchoTxInf>
+				<Data>Campo livre</Data>
+			</EchoTxInf>
+		</EchoReq>
+	</Document>
+	<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+		<SignedInfo>
+			<CanonicalizationMethod
+				Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />
+			<SignatureMethod
+				Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256" />
+			<Reference URI="#7202126a-f0e4-47c1-9a41-b8c8ded22ab1">
+				<Transforms>
+					<Transform
+						Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />
+				</Transforms>
+				<DigestMethod
+					Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" />
+				<DigestValue>xvK692WC5XhI4W9AWXviIuusgIZbnZJaKmuspuy5Z14=
+				</DigestValue>
+			</Reference>
+			<Reference URI="#0f55543b-0b14-47e8-a5d0-f591d016ff83">
+				<Transforms>
+					<Transform
+						Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" />
+					<Transform
+						Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />
+				</Transforms>
+				<DigestMethod
+					Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" />
+				<DigestValue>u6qN7V4zq5izz6vULebu+dngc2hIe3qY5z1/XEiPX0I=
+				</DigestValue>
+			</Reference>
+			<Reference URI="#14875717-04ff-4540-b0a0-a70c696a85a5">
+				<Transforms>
+					<Transform
+						Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#" />
+				</Transforms>
+				<DigestMethod
+					Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" />
+				<DigestValue>YeIgJfp31xm3eVWLLdi72hSHHGgC36Min/bNDVuGP2o=
+				</DigestValue>
+			</Reference>
+		</SignedInfo>
+		<SignatureValue>j/K8zyycOSQugIjCs+WLdRbVu6MW/E8rlPvdLekh+CgINpYnVa+vj2ExnLi0nC1KFyYT9Nui2yqz&#13;
+			Wn1LifuUakNXeHwSGTDESu0l5ywkhtQNRyLAPLR61geKNquesJBGKwx16p35qRC+W4AgYT/ht/NC&#13;
+			ITJvxvcgIfDEVTFKDf8OINMeunERvvrBv7VOwBj/amx8IDoyFmCrjQyKWBWU2c70/KcIIeed82c3&#13;
+			6fJ5CBGalWtYf/MDPbxdD+rBF36hkN1fYovpQ53Bq2SMSc3reKCF73SQ6gSVSwPbCtjWep4MY3Gi&#13;
+			vItkzsDrIxvXilwvM9GBU83tdQzlCcrE/OfjQQ==
+		</SignatureValue>
+		<KeyInfo Id="7202126a-f0e4-47c1-9a41-b8c8ded22ab1">
+			<X509Data>
+				<X509IssuerSerial>
+					<X509IssuerName>CN=SERASA Autoridade Certificadora v5, OU=CSPB-4,
+						O=ICP-Brasil, C=BR</X509IssuerName>
+					<X509SerialNumber>1670769912042056149</X509SerialNumber>
+				</X509IssuerSerial>
+			</X509Data>
+		</KeyInfo>
+	</Signature>
+</Envelope>
