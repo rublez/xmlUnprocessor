@@ -26,12 +26,19 @@ import javax.xml.crypto.dsig.keyinfo.X509IssuerSerial;
 import javax.xml.crypto.dsig.spec.C14NMethodParameterSpec;
 import javax.xml.crypto.dsig.spec.TransformParameterSpec;
 import javax.xml.namespace.QName;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 public class SignatureUtils {
@@ -40,18 +47,29 @@ public class SignatureUtils {
 
 	}
 
+
 	private static String KEY_INFO;
 
-	public static void signUsingJSR105(Document document, List<QName> namesToSign, String algorithm,
-			PrivateKey signingKey, KeyStore keystore) throws Exception {
+	public static void signUsingJSR105(
+			Document document,
+			List<QName> namesToSign,
+			String algorithm,
+			PrivateKey signingKey,
+			KeyStore keystore
+		) throws Exception {
+
+		Document docDoc = (Document) document.cloneNode(true);
+		Document docHdr = (Document) document.cloneNode(true);
+		noDocument(docHdr);
+		noAppHdr(docDoc);
+
 		XMLSignatureFactory signatureFactory = XMLSignatureFactory.getInstance("DOM");
-		CanonicalizationMethod c14nMethod = signatureFactory.newCanonicalizationMethod(EXCLUSIVE,
-				(C14NMethodParameterSpec) null);
+		CanonicalizationMethod c14nMethod = signatureFactory.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null);
 
 		KEY_INFO = UUID.randomUUID().toString();
 		KeyInfoFactory kif = signatureFactory.getKeyInfoFactory();
 		X509Data x509Data = getX509Data(kif, keystore);
-		// kif.newX509Data(Collections.singletonList(signingCert));
+		//kif.newX509Data(Collections.singletonList(signingCert));
 		javax.xml.crypto.dsig.keyinfo.KeyInfo keyInfo = kif.newKeyInfo(Collections.singletonList(x509Data), KEY_INFO);
 
 		XPathFactory xpf = XPathFactory.newInstance();
@@ -60,113 +78,170 @@ public class SignatureUtils {
 
 		List<javax.xml.crypto.dsig.Reference> referenceList = new ArrayList<>();
 		referenceList.add(newReferenceKeyInfo(signatureFactory));
-		Element toDsc = null;
+		
 		javax.xml.crypto.dsig.Reference reference_document = null;
-		// XMLSignContext signContext = new DOMSignContext(signingKey,
-		// document.getDocumentElement());
+		//XMLSignContext signContext = new DOMSignContext(signingKey, document.getDocumentElement());
 
-		for (QName nameToSign : namesToSign) {
-			String expression = "//*[local-name()='" + nameToSign.getLocalPart() + "']";
-			NodeList elementsToSign = (NodeList) xpath.evaluate(expression, document, XPathConstants.NODESET);
-			for (int i = 0; i < elementsToSign.getLength(); i++) {
-				Element elementToSign = (Element) elementsToSign.item(i);
+		QName qHdr = new QName("https://www.bcb.gov.br/pi/pibr.001/1.1", "AppHdr");
+		QName qDoc = new QName("https://www.bcb.gov.br/pi/pibr.001/1.1", "Document");
 
-				final List<Transform> tfList;
-				DigestMethod digestMethod = signatureFactory.newDigestMethod(DigestMethod.SHA256, null);
-				String id = UUID.randomUUID().toString();
-				elementToSign.setAttributeNS(null, "id", id);
-				elementToSign.setIdAttributeNS(null, "id", true);
+		String expressionH = "//*[local-name()='" + qHdr.getLocalPart() + "']";
+		String expressionD = "//*[local-name()='" + qDoc.getLocalPart() + "']";
+		Node elementsToSignAppHdr = (Node) xpath.evaluate(expressionH, docHdr, XPathConstants.NODE);
 
-				if (nameToSign.getLocalPart().equals("AppHdr")) {
+			final List<Transform> tfList;
+			DigestMethod digestMethod = signatureFactory.newDigestMethod(DigestMethod.SHA256, null);
+			String id = UUID.randomUUID().toString();
 
-					XMLSignatureFactory signatureFactory_apphdr = XMLSignatureFactory.getInstance("DOM");
+			XMLSignatureFactory signatureFactory_apphdr = XMLSignatureFactory.getInstance("DOM");
 
-					System.out.println("AppHdr: " + id);
-					tfList = new ArrayList<>(2);
-					tfList.add(
-							signatureFactory_apphdr.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null));
-					tfList.add(signatureFactory_apphdr.newCanonicalizationMethod(EXCLUSIVE,
-							(C14NMethodParameterSpec) null));
+			System.out.println("AppHdr: " + id);
+			tfList = new ArrayList<>(2);
+			tfList.add(signatureFactory_apphdr.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null));
+			tfList.add(signatureFactory_apphdr.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null));
 
-					javax.xml.crypto.dsig.Reference reference = signatureFactory_apphdr.newReference("#" + id,
-							digestMethod, tfList, null, null);
-					referenceList.add(reference);
+			javax.xml.crypto.dsig.Reference reference =
+					signatureFactory_apphdr.newReference(
+							"",
+							digestMethod,
+							tfList,
+							null,
+							null
+							);
+			referenceList.add(reference);
 
-				} else if (nameToSign.getLocalPart().equals("Document")) {
 
-					XMLSignatureFactory signatureFactory_document = XMLSignatureFactory.getInstance("DOM");
+			Node elementsToSignDocument = (Node) xpath.evaluate(expressionD, docDoc, XPathConstants.NODE);
+			//for (int i = 0; i < elementsToSignDocument.getLength(); i++) {
+
+//					Element elementToSign = (Element)elementsToSignAppHdr.item(i);
 
 					digestMethod = signatureFactory.newDigestMethod(DigestMethod.SHA256, null);
 					id = UUID.randomUUID().toString();
-					elementToSign.setAttributeNS(null, "id", id);
-					elementToSign.setIdAttributeNS(null, "id", true);
 
+					//used when dereferencing (is it right)
+					Node toDsc = elementsToSignDocument;
 					System.out.println("Document: " + id);
-					toDsc = elementToSign;
 
-					// URIDereferencer uriDereferencer = new URIDereferencer() {
-
-					// Hellllllllllllllllll!!!!!!!!!!!!!!!!
-					// To use a reference 'null' it must be done, but HOW!!
-					// All references are being cut off when it's done
-					// signContext.setURIDereferencer(new NoUriDereferencer(toDsc));
-
-					reference_document = signatureFactory_document.newReference("#" + id, // To use a reference 'null' we must dereference it, but HOW!!
-							digestMethod, Collections.singletonList(signatureFactory_document
-									.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null)),
-							null, null);
+					reference_document =
+							signatureFactory.newReference(
+									"1",   // To use a reference 'null' we must dereference it, but HOW!!
+									digestMethod,
+									Collections.singletonList(signatureFactory.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null)),
+									null,
+									null
+									);
 					referenceList.add(reference_document);
 
-				}
-			}
-		}
 
-		SignatureMethod signatureMethod = signatureFactory.newSignatureMethod(algorithm, null);
-		SignedInfo signedInfo = signatureFactory.newSignedInfo(c14nMethod, signatureMethod, referenceList);
+			//}
+		
 
-		javax.xml.crypto.dsig.XMLSignature sig = signatureFactory.newXMLSignature(signedInfo, keyInfo, null, null,
+		SignatureMethod signatureMethod =
+				signatureFactory.newSignatureMethod(algorithm, null);
+		SignedInfo signedInfo =
+				signatureFactory.newSignedInfo(c14nMethod, signatureMethod, referenceList);
+
+		javax.xml.crypto.dsig.XMLSignature sig = signatureFactory.newXMLSignature(
+				signedInfo,
+				keyInfo,
+				null,
+				null,
 				null);
 
-		XMLSignContext signContext = new DOMSignContext(signingKey, document.getDocumentElement());
+		QName whereToPut = new QName("AppHdr", "Sgntr");
+		String xpr = "//*[local-name()='" + whereToPut.getLocalPart() + "']";
+		Node sgntrNode = (Node) xpath.evaluate(xpr, document, XPathConstants.NODE);
 
-		// URIDereferencer uriDereferencer = new URIDereferencer() {
+		//sgntrNode.getLength()
+		//XPath xPath = XPathFactory.newInstance().newXPath();
+		//String expression = "//Envelope/AppHdr/Sgntr";
+		//Element sgntrNode = (Element) xPath.compile(expression).evaluate(document, XPathConstants.nODE);
+
+		XMLSignContext signContext = new DOMSignContext(signingKey, sgntrNode);
+		//URIDereferencer uriDereferencer = new URIDereferencer() {
 
 		// Hellllllllllllllllll!!!!!!!!!!!!!!!!
 		// To use a reference 'null' it must be done, but HOW!!
 		// All references are being cut off when it's done
 
-		// NoUriDereferencer dr = new NoUriDereferencer(toDsc);
-		// dr.dereference(reference_document, signContext);
+		NoUriDereferencer dr = new NoUriDereferencer(toDsc);
+		dr.dereference(referenceList.get(2), signContext);
 
-		// signContext.setURIDereferencer(dr);
+		signContext.setURIDereferencer(dr);
 
 		sig.sign(signContext);
 
+
+
 	}
 
-	private static Reference newReferenceKeyInfo(XMLSignatureFactory xmlSignatureFactory)
-			throws InvalidAlgorithmParameterException, NoSuchAlgorithmException {
+	private static  Reference newReferenceKeyInfo(XMLSignatureFactory xmlSignatureFactory) throws InvalidAlgorithmParameterException, NoSuchAlgorithmException {
 		System.out.println("keyInfo: " + KEY_INFO);
-		return xmlSignatureFactory.newReference("#" + KEY_INFO,
+		return xmlSignatureFactory.newReference(
+				"#" + KEY_INFO,
 				xmlSignatureFactory.newDigestMethod(DigestMethod.SHA256, null),
-				Collections.singletonList(
-						xmlSignatureFactory.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null)),
-				null, null);
+				Collections.singletonList(xmlSignatureFactory.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null)),
+				null,
+				null
+				);
 	}
 
-	private static X509Data getX509Data(KeyInfoFactory kif, KeyStore keystore) throws KeyStoreException {
+
+	private static  X509Data getX509Data(KeyInfoFactory kif, KeyStore keystore) throws KeyStoreException {
 		return newX509Data(kif, getCertificate(keystore));
 	}
 
-	private static X509Certificate getCertificate(KeyStore keystore) throws KeyStoreException {
+	private static  X509Certificate getCertificate(KeyStore keystore) throws KeyStoreException {
 		String alias = keystore.aliases().nextElement();
 		return (X509Certificate) keystore.getCertificate(alias);
 	}
 
-	private static X509Data newX509Data(KeyInfoFactory kif, X509Certificate certificate) {
-		X509IssuerSerial x509IssuerSerial = kif.newX509IssuerSerial(certificate.getIssuerDN().toString(),
-				certificate.getSerialNumber());
+
+	private static  X509Data newX509Data(KeyInfoFactory kif, X509Certificate certificate) {
+		X509IssuerSerial x509IssuerSerial = kif.newX509IssuerSerial(certificate.getIssuerDN().toString(), certificate.getSerialNumber());
 		return kif.newX509Data(Collections.singletonList(x509IssuerSerial));
 	}
+
+
+	private static void  noDocument(Document doc) throws TransformerException {
+		QName documentNode = new QName("Envelope", "Document");
+		Node removed = remove(documentNode, doc);
+		removed.getParentNode().removeChild(removed);
+		
+		TransformerFactory tf = TransformerFactory.newInstance();
+		Transformer t = tf.newTransformer();
+        t.transform(new DOMSource(doc), new StreamResult(System.out));
+        
+        //return doc;
+	}
+
+	private static void noAppHdr(Document doc) throws TransformerException {
+		QName documentNode = new QName("Envelope", "AppHdr");
+		Node removed = remove(documentNode, doc);
+		removed.getParentNode().removeChild(removed);
+		
+		TransformerFactory tf = TransformerFactory.newInstance();
+		Transformer t = tf.newTransformer();
+        t.transform(new DOMSource(doc), new StreamResult(System.out));
+		
+	}
+
+	private static Node remove(QName locator, Document document) {
+		XPathFactory xpf = XPathFactory.newInstance();
+		XPath xpath = xpf.newXPath();
+		String xpr = "//*[local-name()='" + locator.getLocalPart() + "']";
+		Node node = null;
+		try {
+			return (Node) xpath.evaluate(xpr, document, XPathConstants.NODE);
+
+		} catch (XPathExpressionException e) {
+			e.printStackTrace();
+
+		}
+		return null;
+
+	}
+
 
 }
