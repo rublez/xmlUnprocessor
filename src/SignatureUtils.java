@@ -37,22 +37,17 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 public class SignatureUtils {
 
 	public SignatureUtils() {
-
 	}
-
 
 	private static String KEY_INFO;
 
 	public static void signUsingJSR105(
 			Document document,
-			List<QName> namesToSign,
 			String algorithm,
 			PrivateKey signingKey,
 			KeyStore keystore
@@ -125,7 +120,7 @@ public class SignatureUtils {
 
 					reference_document =
 							signatureFactory.newReference(
-									"1",   // To use a reference 'null' we must dereference it, but HOW!!
+									null,   // To use a reference 'null' we must dereference it, but HOW!!
 									digestMethod,
 									Collections.singletonList(signatureFactory.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null)),
 									null,
@@ -165,10 +160,10 @@ public class SignatureUtils {
 		// To use a reference 'null' it must be done, but HOW!!
 		// All references are being cut off when it's done
 
-		NoUriDereferencer dr = new NoUriDereferencer(toDsc);
-		dr.dereference(referenceList.get(2), signContext);
+		//NoUriDereferencer dr = new NoUriDereferencer(toDsc);
+		//dr.dereference(referenceList.get(2), signContext);
 
-		signContext.setURIDereferencer(dr);
+		//signContext.setURIDereferencer(dr);
 
 		sig.sign(signContext);
 
