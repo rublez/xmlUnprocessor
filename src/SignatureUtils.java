@@ -51,7 +51,7 @@ public class SignatureUtils {
 			String algorithm,
 			PrivateKey signingKey,
 			KeyStore keystore
-		) throws Exception {
+			) throws Exception {
 
 		Document docDoc = (Document) document.cloneNode(true);
 		Document docHdr = (Document) document.cloneNode(true);
@@ -64,18 +64,14 @@ public class SignatureUtils {
 		KEY_INFO = UUID.randomUUID().toString();
 		KeyInfoFactory kif = signatureFactory.getKeyInfoFactory();
 		X509Data x509Data = getX509Data(kif, keystore);
-		//kif.newX509Data(Collections.singletonList(signingCert));
 		javax.xml.crypto.dsig.keyinfo.KeyInfo keyInfo = kif.newKeyInfo(Collections.singletonList(x509Data), KEY_INFO);
 
 		XPathFactory xpf = XPathFactory.newInstance();
 		XPath xpath = xpf.newXPath();
 		xpath.setNamespaceContext(new DSNamespaceContext());
 
-		List<javax.xml.crypto.dsig.Reference> referenceList = new ArrayList<>();
+		List<Reference> referenceList = new ArrayList<>();
 		referenceList.add(newReferenceKeyInfo(signatureFactory));
-		
-		javax.xml.crypto.dsig.Reference reference_document = null;
-		//XMLSignContext signContext = new DOMSignContext(signingKey, document.getDocumentElement());
 
 		QName qHdr = new QName("https://www.bcb.gov.br/pi/pibr.001/1.1", "AppHdr");
 		QName qDoc = new QName("https://www.bcb.gov.br/pi/pibr.001/1.1", "Document");
@@ -84,53 +80,49 @@ public class SignatureUtils {
 		String expressionD = "//*[local-name()='" + qDoc.getLocalPart() + "']";
 		Node elementsToSignAppHdr = (Node) xpath.evaluate(expressionH, docHdr, XPathConstants.NODE);
 
-			final List<Transform> tfList;
-			DigestMethod digestMethod = signatureFactory.newDigestMethod(DigestMethod.SHA256, null);
-			String id = UUID.randomUUID().toString();
+		final List<Transform> tfList;
+		DigestMethod digestMethod = signatureFactory.newDigestMethod(DigestMethod.SHA256, null);
+		String id = UUID.randomUUID().toString();
 
-			XMLSignatureFactory signatureFactory_apphdr = XMLSignatureFactory.getInstance("DOM");
+		XMLSignatureFactory signatureFactory_apphdr = XMLSignatureFactory.getInstance("DOM");
 
-			System.out.println("AppHdr: " + id);
-			tfList = new ArrayList<>(2);
-			tfList.add(signatureFactory_apphdr.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null));
-			tfList.add(signatureFactory_apphdr.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null));
+		System.out.println("AppHdr: " + id);
+		tfList = new ArrayList<>(2);
+		tfList.add(signatureFactory_apphdr.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null));
+		tfList.add(signatureFactory_apphdr.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null));
 
-			javax.xml.crypto.dsig.Reference reference =
-					signatureFactory_apphdr.newReference(
-							"",
-							digestMethod,
-							tfList,
-							null,
-							null
-							);
-			referenceList.add(reference);
-
-
-			Node elementsToSignDocument = (Node) xpath.evaluate(expressionD, docDoc, XPathConstants.NODE);
-			//for (int i = 0; i < elementsToSignDocument.getLength(); i++) {
-
-//					Element elementToSign = (Element)elementsToSignAppHdr.item(i);
-
-					digestMethod = signatureFactory.newDigestMethod(DigestMethod.SHA256, null);
-					id = UUID.randomUUID().toString();
-
-					//used when dereferencing (is it right)
-					Node toDsc = elementsToSignDocument;
-					System.out.println("Document: " + id);
-
-					reference_document =
-							signatureFactory.newReference(
-									null,   // To use a reference 'null' we must dereference it, but HOW!!
-									digestMethod,
-									Collections.singletonList(signatureFactory.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null)),
-									null,
-									null
-									);
-					referenceList.add(reference_document);
+		Reference reference =
+				signatureFactory_apphdr.newReference(
+						"",
+						digestMethod,
+						tfList,
+						null,
+						null
+				);
+		referenceList.add(reference);
 
 
-			//}
-		
+		Node elementsToSignDocument = (Node) xpath.evaluate(expressionD, docDoc, XPathConstants.NODE);
+		digestMethod = signatureFactory.newDigestMethod(DigestMethod.SHA256, null);
+		id = UUID.randomUUID().toString();
+
+		//used when dereferencing (is it right)
+		Node toDsc = elementsToSignDocument;
+		System.out.println("Document: " + id);
+
+		Reference reference_document =
+				signatureFactory.newReference(
+						null,   // To use a reference 'null' we must dereference it, but HOW!!
+						digestMethod,
+						Collections.singletonList(signatureFactory.newCanonicalizationMethod(EXCLUSIVE, (C14NMethodParameterSpec) null)),
+						null,
+						null
+				);
+		referenceList.add(reference_document);
+
+
+		//}
+
 
 		SignatureMethod signatureMethod =
 				signatureFactory.newSignatureMethod(algorithm, null);
@@ -203,22 +195,25 @@ public class SignatureUtils {
 		QName documentNode = new QName("Envelope", "Document");
 		Node removed = remove(documentNode, doc);
 		removed.getParentNode().removeChild(removed);
-		
+
 		TransformerFactory tf = TransformerFactory.newInstance();
 		Transformer t = tf.newTransformer();
-        t.transform(new DOMSource(doc), new StreamResult(System.out));
-        
-        //return doc;
+		System.out.println("AppHdr: ");
+		t.transform(new DOMSource(doc), new StreamResult(System.out));
+		System.out.println("\n\n");
+		
 	}
 
 	private static void noAppHdr(Document doc) throws TransformerException {
 		QName documentNode = new QName("Envelope", "AppHdr");
 		Node removed = remove(documentNode, doc);
 		removed.getParentNode().removeChild(removed);
-		
+
 		TransformerFactory tf = TransformerFactory.newInstance();
 		Transformer t = tf.newTransformer();
-        t.transform(new DOMSource(doc), new StreamResult(System.out));
+		System.out.println("Document: ");
+		t.transform(new DOMSource(doc), new StreamResult(System.out));
+		System.out.println("\n\n");
 		
 	}
 
@@ -226,7 +221,6 @@ public class SignatureUtils {
 		XPathFactory xpf = XPathFactory.newInstance();
 		XPath xpath = xpf.newXPath();
 		String xpr = "//*[local-name()='" + locator.getLocalPart() + "']";
-		Node node = null;
 		try {
 			return (Node) xpath.evaluate(xpr, document, XPathConstants.NODE);
 
